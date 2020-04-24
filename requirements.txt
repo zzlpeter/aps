@@ -1,0 +1,9 @@
+APScheduler==3.6.1
+aiohttp==3.5.4
+aiomysql==0.0.19
+aioredis==1.2.0
+arrow==0.15.2
+peewee==3.13.2
+peewee-async==0.7.0
+requests==2.22.0
+toml==0.10.0

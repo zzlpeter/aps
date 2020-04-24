@@ -1,0 +1,12 @@
+[root]
+    filename = '/data/logs/app/root.log'
+    maxBytes = 1024100 # 文件大小为100M
+    backupCount = 5 # 备份份数
+[other]
+    filename = '/data/logs/app/other.log'
+    maxBytes = 1024100 # 文件大小为100M
+    backupCount = 5 # 备份份数
+[apscheduler]
+    filename = '/data/logs/app/apscheduler.log'
+    maxBytes = 1024100 # 文件大小为100M
+    backupCount = 5 # 备份份数
