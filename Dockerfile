@@ -1,14 +1,14 @@
 FROM python:3.7
 
-RUN mkdir -p /data/app/data && \
-    mkdir -p /data/logs/app && \
+RUN mkdir -p /data/app/aps && \
+    mkdir -p /data/logs/app/aps && \
     mkdir -p /data/downloads
 
-WORKDIR /data/app/data
+WORKDIR /data/app/aps
 
-COPY requirements.txt /data/app/data/
+COPY requirements.txt /data/app/aps/
 
-COPY . /data/app/data/
+COPY . /data/app/aps/
 
 RUN pip install -r requirements.txt
 
@@ -16,4 +16,4 @@ ENV APP_ENV online
 
 EXPOSE 80
 
-CMD ["python", "/data/app/data/main.py"]
+CMD ["python", "/data/app/aps/main.py"]
