@@ -96,12 +96,13 @@ class BaseServer(dict, object, metaclass=RequestMetaClass):
             for k, v in getattr(self, attr, {}).items():
                 vv = getattr(self, k, None) or v.default
                 if v.required and vv is None:
-                    raise AttributeError('<%s is required, found the given value is %s>' % (k, vv))
+                    raise AttributeError('Class %s with %s %s is required, found the given value is %s' %
+                                         (self.__class__.__name__, v.__class__.__name__, k, vv))
                 self['_{}'.format(attr.strip('_'))][k] = vv
-        self._prepare_request_params()
+        self._prepare_request_args()
         return self
 
-    def _prepare_request_params(self):
+    def _prepare_request_args(self):
         req_map = {}
         if self._query:
             req_map['params'] = self._query
@@ -129,7 +130,7 @@ class BaseServer(dict, object, metaclass=RequestMetaClass):
 
     def json(self, safe=True):
         try:
-            return json.loads(self.response)
+            return json.loads(self._response)
         except Exception as e:
             logger.error({'panic_keyword': '_unserialize_err', 'err': traceback.format_exc(),
                           'url': self._url, 'fetch_url': self._fetch_url, 'data': self._data,
@@ -147,7 +148,7 @@ from . import BaseServer, DataField, QueryField, JsonField
 
 class BackendServer(BaseServer):
     __HOST__ = 'http://www.test.com'
-    TIMEOUT = 5
+    TIMEOUT = 5  # 默认为5s
 
 class ReqTest(BackendServer):
     URL = '/test/api/get'
