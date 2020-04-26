@@ -12,8 +12,6 @@ COPY . /data/app/aps/
 
 RUN pip install -r requirements.txt
 
-ENV APP_ENV online
-
-EXPOSE 80
+ENV APP_ENV local
 
 CMD ["python", "/data/app/aps/main.py"]

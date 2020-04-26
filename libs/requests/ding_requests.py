@@ -15,6 +15,6 @@ class DingDingAlarm(DingServer):
     """
     URL = '/robot/send'
     METHOD = 'POST'
-    access_token = QueryField(default='fdbf4738cb4dc9d0094e0b476853c39b666150cefdc9e52c7066f3eddb6c5f75')
+    access_token = QueryField(required=True)
     msgtype = JsonField(default='text')
     text = JsonField(required=True)
