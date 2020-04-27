@@ -6,36 +6,8 @@ import time
 import pickle
 import random
 from functools import wraps
+from functools import lru_cache
 from configparser import ConfigParser
-
-
-def func_cache(func):
-    """
-    方法执行成功 -> 缓存结果
-    异常之后直接raise、不缓存
-    """
-    cache_dict = dict()
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        # 计算 args kwargs 序列化之后的md5值
-        k_args = pickle.dumps(sorted(args))
-        keys = sorted(kwargs.keys())
-        tmp_list = []
-        for k in keys:
-            tmp_list.extend([k, kwargs[k]])
-        k_kwargs = pickle.dumps(tmp_list)
-        cache_key = md5(str(k_args) + str(k_kwargs))
-        if cache_dict.get(func.__name__, {}).get('cache_md5') != cache_key:
-            try:
-                cache_dict[func.__name__] = {
-                    'cache_md5': cache_key,
-                    'result': func(*args, **kwargs)
-                }
-            except Exception as e:
-                raise e
-        return cache_dict[func.__name__]['result']
-    return wrapper
 
 
 class Host:
@@ -47,7 +19,7 @@ class Host:
     >>> 172.25.4.68
     """
     @staticmethod
-    @func_cache
+    @lru_cache()
     def host_ip():
         """
         查询本机ip地址
@@ -62,7 +34,7 @@ class Host:
             return ip
 
     @staticmethod
-    @func_cache
+    @lru_cache()
     def host_name():
         """
         查询本机hostname
