@@ -16,8 +16,7 @@ def lock(func):
     """
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        task_key = args[0]
-        args = args[1:]
+        task_key, *args = args
         # 判断环境变量
         is_killed = Environ().IS_KILLED
         if is_killed == 'KILLED':
