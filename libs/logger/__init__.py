@@ -3,6 +3,7 @@ import logging.config
 import json
 import datetime
 from copy import deepcopy
+from functools import singledispatch
 
 from libs.utils.other import Host
 from libs.utils.datekit import now_timestamp, datetime_fmt
@@ -12,11 +13,28 @@ from libs.tomlread import ConfEntity
 REMOVE_ATTR = ["module", "exc_text", "stack_info", "created", "msecs", "relativeCreated", "exc_info"]
 
 
+@singledispatch
+def json_decode(o):
+    raise TypeError('Can not decode {} with type {}'.format(o, type(o)))
+
+
+"""
+if need other type to json decode, pls add here just as below !!!
+"""
+
+
+@json_decode.register(datetime.date)
+@json_decode.register(datetime.datetime)
+def _(o):
+    return datetime_fmt(o)
+
+
 class NormalEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, datetime.datetime):
-            return datetime_fmt(o)
-        return super(NormalEncoder, self).default(o)
+        try:
+            return json_decode(o)
+        except TypeError:
+            return super(NormalEncoder, self).default(o)
 
 
 class JSONFormatter(logging.Formatter):
