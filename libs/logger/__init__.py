@@ -50,13 +50,7 @@ class JSONFormatter(logging.Formatter):
         extra['args'] = str(extra.get('args', ''))
         if record.exc_info:
             extra['exc_info'] = self.formatException(record.exc_info)
-        try:
-            return json.dumps(extra, ensure_ascii=False, cls=NormalEncoder)
-        except Exception as e:
-            try:
-                return str(extra)
-            except Exception as e:
-                return extra
+        return json.dumps(extra, ensure_ascii=False, cls=NormalEncoder)
 
     @classmethod
     def build_record(cls, record):
