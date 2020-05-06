@@ -35,11 +35,17 @@ class JsonField(Field):
         super(JsonField, self).__init__(default, required)
 
 
+class PathField(Field):
+    def __init__(self, default=None, required=False):
+        super(PathField, self).__init__(default, required)
+
+
 class RequestMetaClass(type):
     def __new__(cls, name, bases, attrs):
         query_mapper = {}
         data_mapper = {}
         json_mapper = {}
+        path_mapper = {}
         for k, v in attrs.items():
             if isinstance(v, DataField):
                 data_mapper[k] = v
@@ -47,13 +53,16 @@ class RequestMetaClass(type):
                 query_mapper[k] = v
             if isinstance(v, JsonField):
                 json_mapper[k] = v
+            if isinstance(v, PathField):
+                path_mapper[k] = v
 
-        for k in chain(query_mapper.keys(), data_mapper.keys(), json_mapper.keys()):
+        for k in chain(query_mapper.keys(), data_mapper.keys(), json_mapper.keys(), path_mapper.keys()):
             attrs.pop(k)
 
         attrs['__query__'] = query_mapper
         attrs['__data__'] = data_mapper
         attrs['__json__'] = json_mapper
+        attrs['__path1__'] = path_mapper
 
         return type.__new__(cls, name, bases, attrs)
 
@@ -81,24 +90,25 @@ class BaseServer(dict, object, metaclass=RequestMetaClass):
 
     def _set_request_url(self):
         self._url = urllib.parse.urljoin(self.__HOST__, self.URL)
+        if self._path1:
+            self._url = self._url.format(**self._path1)
 
     def _set_method(self):
         self._method = self.METHOD.lower()
 
     def new_server(self):
-        self._set_headers()
-        self._set_timeout()
-        self._set_request_url()
-        self._set_method()
-
-        self._data, self._query, self._json = {}, {}, {}
-        for attr in ('__query__', '__data__', '__json__'):
+        self._data, self._query, self._json, self._path1 = {}, {}, {}, {}
+        for attr in ('__query__', '__data__', '__json__', '__path1__'):
             for k, v in getattr(self, attr, {}).items():
                 vv = getattr(self, k, None) or v.default
                 if v.required and vv is None:
                     raise AttributeError('Class %s with %s %s is required, found the given value is %s' %
                                          (self.__class__.__name__, v.__class__.__name__, k, vv))
                 self['_{}'.format(attr.strip('_'))][k] = vv
+        self._set_headers()
+        self._set_timeout()
+        self._set_request_url()
+        self._set_method()
         self._prepare_request_args()
         return self
 
