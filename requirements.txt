@@ -7,3 +7,5 @@ peewee==3.13.2
 peewee-async==0.7.0
 requests==2.22.0
 toml==0.10.0
+tornado==5.1.1
+tornado-swagger==1.2.3
