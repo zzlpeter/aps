@@ -6,10 +6,10 @@ from copy import deepcopy
 import peewee
 
 from libs.mysql import MysqlPools
-from . import JsonField
+from . import JsonField, ConnectionManager
 
 
-class Task(peewee.Model):
+class Task(peewee.Model, ConnectionManager):
     """
     任务表
     """
@@ -21,6 +21,7 @@ class Task(peewee.Model):
 
     id = peewee.IntegerField()
     task_key = peewee.CharField()
+    desc = peewee.CharField()
     execute_func = peewee.CharField()
     trigger = peewee.CharField(choices=trigger_choices)
     spec = peewee.CharField()
@@ -28,14 +29,18 @@ class Task(peewee.Model):
     is_valid = peewee.IntegerField()
     status = peewee.CharField()
     extra = JsonField()
+    create_at = peewee.DateTimeField()
+    update_at = peewee.DateTimeField()
 
     class Meta:
-        database = MysqlPools.kodo.db_conn
+        database = MysqlPools.default.db_conn
+        # MysqlPools之所有有default属性、是在mysql.toml里配置的
         db_table = 'task'
 
     @classmethod
     def task_atomic_insert(cls, task_key):
         db = cls._meta.database
+        db.connect(reuse_if_open=True)
         execute_success = True
         sub_task_id = None
         with db.atomic() as trans:
@@ -48,11 +53,13 @@ class Task(peewee.Model):
                 trans.commit()
             except Exception as e:
                 trans.rollback()
+        db.close()
         return execute_success, sub_task_id
 
     @classmethod
     def task_atomic_update(cls, task_key, sub_task_id, status, _ext):
         db = cls._meta.database
+        db.connect(reuse_if_open=True)
         is_success, err = True, None
         with db.atomic() as trans:
             try:
@@ -60,17 +67,28 @@ class Task(peewee.Model):
                 sub = TaskExecute.select().where(TaskExecute.id == sub_task_id).get()
                 ext = deepcopy(sub.extra)
                 ext.update(**_ext)
-                sub.extra = ext
-                sub.status = status
-                sub.save()
+                sub.update(extra=ext, status=status).where(TaskExecute.id == sub_task_id).execute()
                 trans.commit()
             except Exception as e:
                 is_success, err = False, e
                 trans.rollback()
+        db.close()
         return is_success, err
 
+    def update_ext(self, tk=None, **kwargs):
+        if self.id is None and tk is None:
+            raise Exception('Can not update empty instance')
+        if self.id is not None:
+            instance = self
+        else:
+            instance = self.select().where(Task.task_key == tk).get()
+        ext = deepcopy(instance.extra)
+        ext.update(**kwargs)
+        instance.update(extra=ext).execute()
+        Task.close()
 
-class TaskExecute(peewee.Model):
+
+class TaskExecute(peewee.Model, ConnectionManager):
     """
     任务执行表
     """
@@ -78,9 +96,11 @@ class TaskExecute(peewee.Model):
     task_id = peewee.IntegerField(help_text='任务ID')
     status = peewee.CharField(help_text='执行状态')
     extra = JsonField(help_text='额外信息(json格式)', default={})
+    create_at = peewee.DateTimeField()
+    update_at = peewee.DateTimeField()
 
     class Meta:
-        database = MysqlPools.kodo.db_conn
+        database = MysqlPools.default.db_conn
         db_table = 'execute_task'
 
     def update_ext(self, pk=None, **kwargs):
@@ -88,9 +108,10 @@ class TaskExecute(peewee.Model):
             raise Exception('Can not update empty instance')
         if self.id is not None:
             instance = self
+            pk = self.id
         else:
             instance = self.select().where(TaskExecute.id == pk).get()
         ext = deepcopy(instance.extra)
         ext.update(**kwargs)
-        instance.extra = ext
-        instance.save()
+        instance.update(extra=ext).where(TaskExecute.id == pk).execute()
+        TaskExecute.close()

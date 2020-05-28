@@ -58,6 +58,7 @@ async def sync_schedule_task():
     """
     同步数据库定时任务到 apschedule
     """
+    Task.connect()
     tasks = Task.select()
     for t in tasks:
         tid = '{}_{}'.format(t.id, t.task_key)
@@ -102,6 +103,7 @@ async def sync_schedule_task():
             'spec': t.spec
         }
         logger.info({'keyword': 'add_job', 'job_id': tid})
+    Task.close()
 
 
 async def shutdown():
@@ -124,6 +126,8 @@ def signal_handler(signalnum, frame):
 if __name__ == '__main__':
     # to catch term signal
     signal.signal(signal.SIGTERM, signal_handler)
+    # to run web api background
+    os.system('python {} &'.format(os.path.join(project_path, 'web.py')))
     # run scheduler main process
     scheduler.add_listener(err_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED | EVENT_JOB_ERROR)
     # scheduler.add_job(sync_schedule_task, trigger=CronTrigger.from_crontab('* * * * *'), id='sync_task')

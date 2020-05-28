@@ -15,3 +15,15 @@ class JsonField(TextField):
             return json.loads(value)
         except:
             return value
+
+
+class ConnectionManager(object):
+    @classmethod
+    def close(cls):
+        db = cls._meta.database
+        db.close()
+
+    @classmethod
+    def connect(cls):
+        db = cls._meta.database
+        db.connect(reuse_if_open=True)
