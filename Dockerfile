@@ -1,19 +1,25 @@
 FROM python:3.7
 
-RUN mkdir -p /data/app/assassin && \
-    mkdir -p /data/logs/app/assassin && \
-    mkdir -p /data/downloads
+RUN apt-get update && apt-get install -y procps
 
-WORKDIR /data/app/assassin
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-COPY requirements.txt /data/app/assassin/
+RUN mkdir -p /data0/webapps/assassin && \
+    mkdir -p /data0/logs/assassin
 
-COPY . /data/app/assassin/
+WORKDIR /data0/webapps/assassin
+
+ARG app_env
+
+COPY requirements.txt /data0/webapps/assassin/
+
+COPY . /data0/webapps/assassin/
 
 RUN pip install -r requirements.txt
 
-ENV APP_ENV local
+ENV APP_ENV $app_env
 
 EXPOSE 8888
 
-CMD ["sh", "/data/app/assassin/start.sh"]
+CMD ["python", "/data0/webapps/assassin/main.py"]

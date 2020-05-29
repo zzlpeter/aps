@@ -58,9 +58,7 @@ async def sync_schedule_task():
     """
     同步数据库定时任务到 apschedule
     """
-    Task.connect()
-    tasks = Task.select()
-    for t in tasks:
+    for t in Task.select():
         tid = '{}_{}'.format(t.id, t.task_key)
         job = scheduler.get_job(tid)
         # 移除任务
@@ -103,7 +101,6 @@ async def sync_schedule_task():
             'spec': t.spec
         }
         logger.info({'keyword': 'add_job', 'job_id': tid})
-    Task.close()
 
 
 async def shutdown():
