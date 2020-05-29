@@ -6,3 +6,4 @@ user = "root"
 password = "123456"
 charset = "utf8"
 autocommit = true
+stale_timeout = 60
