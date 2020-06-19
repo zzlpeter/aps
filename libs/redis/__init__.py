@@ -36,11 +36,8 @@ class Redis:
         return self.redis_pools
 
 
-RedisPools = Redis().pools
-
-
 async def redis_pools(alias):
-    pools = await RedisPools
+    pools = await Redis().pools
     return pools[alias]
 
 
