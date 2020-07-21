@@ -1,5 +1,6 @@
 import logging
 import logging.config
+import concurrent_log_handler
 import json
 import datetime
 from copy import deepcopy
@@ -128,7 +129,8 @@ class LoggerConf:
     def cpy_handler(self):
         handler = {
             'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
+            # 'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'logging.handlers.ConcurrentRotatingFileHandler',
             'formatter': 'json',
             # 'filename': os.path.join("./log/", 'root.log'),  # 输出位置
             'maxBytes': 1024 * 1024 * 5,  # 文件大小 5M
