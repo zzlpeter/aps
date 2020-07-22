@@ -23,6 +23,7 @@ class Redis:
         _redis_pools = {}
         redis_conf = ConfEntity().redis
         for alias, cnf in redis_conf.items():
+            cnf = cnf.copy()
             address = cnf.pop('host')
             port = cnf.pop('port')
             conn = await aioredis.create_redis_pool((address, port), **cnf)
