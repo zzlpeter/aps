@@ -6,10 +6,10 @@ from copy import deepcopy
 import peewee
 
 from libs.mysql import MysqlPools
-from . import JsonField, ConnectionManager
+from . import JsonField
 
 
-class Task(peewee.Model, ConnectionManager):
+class Task(peewee.Model):
     """
     任务表
     """
@@ -40,8 +40,7 @@ class Task(peewee.Model, ConnectionManager):
     @classmethod
     def task_atomic_insert(cls, task_key):
         db = cls._meta.database
-        db.connect(reuse_if_open=True)
-        execute_success = True
+        execute_success = False
         sub_task_id = None
         with db.atomic() as trans:
             try:
@@ -49,17 +48,16 @@ class Task(peewee.Model, ConnectionManager):
                 task_id = task[0].id
                 cls.update(status='doing').where(Task.task_key == task_key).execute()
                 sub = TaskExecute.create(task_id=task_id, status='todo', extra={})
-                sub_task_id = sub.id
                 trans.commit()
+                sub_task_id = sub.id
+                execute_success = True
             except Exception as e:
                 trans.rollback()
-        db.close()
         return execute_success, sub_task_id
 
     @classmethod
     def task_atomic_update(cls, task_key, sub_task_id, status, _ext):
         db = cls._meta.database
-        db.connect(reuse_if_open=True)
         is_success, err = True, None
         with db.atomic() as trans:
             try:
@@ -72,7 +70,6 @@ class Task(peewee.Model, ConnectionManager):
             except Exception as e:
                 is_success, err = False, e
                 trans.rollback()
-        db.close()
         return is_success, err
 
     def update_ext(self, tk=None, **kwargs):
@@ -85,10 +82,9 @@ class Task(peewee.Model, ConnectionManager):
         ext = deepcopy(instance.extra)
         ext.update(**kwargs)
         instance.update(extra=ext).execute()
-        Task.close()
 
 
-class TaskExecute(peewee.Model, ConnectionManager):
+class TaskExecute(peewee.Model):
     """
     任务执行表
     """
@@ -114,4 +110,3 @@ class TaskExecute(peewee.Model, ConnectionManager):
         ext = deepcopy(instance.extra)
         ext.update(**kwargs)
         instance.update(extra=ext).where(TaskExecute.id == pk).execute()
-        TaskExecute.close()
