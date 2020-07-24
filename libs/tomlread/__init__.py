@@ -1,5 +1,6 @@
 import os
 import toml
+from functools import lru_cache
 
 from libs.decorators import singleton
 
@@ -26,6 +27,7 @@ class ConfEntity:
     conf = dict()
 
     @property
+    @lru_cache()
     def mysql(self):
         conf = get_conf_path('mysql')
         if 'mysql' not in self.conf:
@@ -35,6 +37,7 @@ class ConfEntity:
         return self.conf['mysql']
 
     @property
+    @lru_cache()
     def redis(self):
         conf = get_conf_path('redis')
         if 'redis' not in self.conf:
@@ -44,6 +47,7 @@ class ConfEntity:
         return self.conf['redis']
 
     @property
+    @lru_cache()
     def common(self):
         conf = get_conf_path('common')
         if 'common' not in self.conf:
@@ -53,6 +57,7 @@ class ConfEntity:
         return self.conf['common']
 
     @property
+    @lru_cache()
     def logger(self):
         conf = get_conf_path('logger')
         if 'logger' not in self.conf:
