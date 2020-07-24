@@ -17,32 +17,33 @@ class SpecialEmpty(object):
 
 
 class Field(object):
-    def __init__(self, default, required):
+    def __init__(self, default, required, comment):
         self.default = default
         self.required = required
+        self.comment = comment
 
     def __str__(self):
         return '<%s:%s>' % (self.__class__.__name__, self.default)
 
 
 class DataField(Field):
-    def __init__(self, default=None, required=False):
-        super(DataField, self).__init__(default, required)
+    def __init__(self, default=None, required=False, comment=None):
+        super(DataField, self).__init__(default, required, comment)
 
 
 class QueryField(Field):
-    def __init__(self, default=None, required=False):
-        super(QueryField, self).__init__(default, required)
+    def __init__(self, default=None, required=False, comment=None):
+        super(QueryField, self).__init__(default, required, comment)
 
 
 class JsonField(Field):
-    def __init__(self, default=None, required=False):
-        super(JsonField, self).__init__(default, required)
+    def __init__(self, default=None, required=False, comment=None):
+        super(JsonField, self).__init__(default, required, comment)
 
 
 class PathField(Field):
-    def __init__(self, default=None, required=False):
-        super(PathField, self).__init__(default, required)
+    def __init__(self, default=None, required=False, comment=None):
+        super(PathField, self).__init__(default, required, comment)
 
 
 class RequestMetaClass(type):
