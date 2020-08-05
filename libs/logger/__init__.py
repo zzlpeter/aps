@@ -95,8 +95,12 @@ class JSONFormatter(logging.Formatter):
         idx = 0
         f_back = sys._getframe().f_back
         while idx < MAX_BACK_DEPTH:
+            if not f_back: break
             local = f_back.f_locals
-            trace_id = local.get('__unique_trace_id__') or local.get('kwargs', {}).get('__unique_trace_id__')
+            if not local: break
+            _kwargs = local.get('kwargs')
+            kwargs = _kwargs if type(_kwargs) is dict else {}
+            trace_id = local.get('__unique_trace_id__') or kwargs.get('__unique_trace_id__')
             if trace_id is not None:
                 extra['trace_id'] = trace_id
                 break
