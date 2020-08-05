@@ -1,7 +1,7 @@
 from functools import wraps
 import traceback
 
-from libs.utils.other import Environ, Host
+from libs.utils.other import Environ, Host, gen_uuid
 from libs.utils.notice import ding_ding_notice
 from libs.logger import LoggerPool
 from models.task import Task
@@ -23,16 +23,20 @@ def lock(func):
             logger.info({'keyword': 'receive_sigterm', 'ip': ip})
             return
 
+        # 生成trace_id
+        __unique_trace_id__ = gen_uuid()
+
         # 执行原子操作
-        execute_success, sub_task_id = Task.task_atomic_insert(task_key)
+        execute_success, sub_task_id = Task.task_atomic_insert(task_key, __unique_trace_id__)
 
         # 任务是否已被执行
         if not execute_success:
             logger.info({'keyword': 'get_no_lock', 'ip': ip, 'task_key': task_key})
             return
 
-        # 将当前任务对象及session更新至kwargs参数
+        # 将当前子任务ID及trace_id更新至kwargs参数
         kwargs.update(sub_task_id=sub_task_id)
+        kwargs.update(__unique_trace_id__=__unique_trace_id__)
 
         # 开始执行任务
         logger.info({'keyword': 'get_lock', 'ip': ip})
@@ -94,4 +98,11 @@ class TriggerOperate:
 
     @staticmethod
     def make_args(task_key, args):
-        return '"{}",'.format(task_key) + args
+        if type(args) is not str:
+            args = ''
+        if not args:
+            return '"{}"'.format(task_key)
+        args = args.replace('"', '').replace("'", '')
+        args_list = args.split(',')
+        args_with_double_quotes = ['"{}"'.format(arg) for arg in args_list]
+        return '"{}",'.format(task_key) + ','.join(args_with_double_quotes)

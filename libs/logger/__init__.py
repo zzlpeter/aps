@@ -2,6 +2,7 @@ import logging
 import logging.config
 import concurrent_log_handler
 import json
+import sys
 import datetime
 from copy import deepcopy
 from functools import singledispatch
@@ -12,6 +13,7 @@ from libs.tomlread import ConfEntity
 
 
 REMOVE_ATTR = ["module", "exc_text", "stack_info", "created", "msecs", "relativeCreated", "exc_info"]
+MAX_BACK_DEPTH = 100
 
 
 @singledispatch
@@ -45,9 +47,10 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record):
         extra = self.build_record(record)
-        # self.format_extra_info(extra)
+        self.format_extra_info(extra)
         self.set_format_time(extra)
         self.set_host_ip(extra)
+        self.set_trace_id(extra)
         extra['args'] = str(extra.get('args', ''))
         if record.exc_info:
             extra['exc_info'] = self.formatException(record.exc_info)
@@ -69,19 +72,36 @@ class JSONFormatter(logging.Formatter):
 
     @classmethod
     def format_extra_info(cls, extra):
-        # msg = extra.get('msg', {}) or {}
-        # base = ['filename', 'lineno', 'function_name', 'log_key']
-        # for b in base:
-        #     t = msg.pop(b, None)
-        #     if t is not None:
-        #         extra[b] = t
-        # extra['msg'] = msg
-        pass
+        msg = extra.get('msg')
+        if type(msg) is not dict:
+            extra['msg'] = {
+                'msg': msg
+            }
 
     @classmethod
     def set_host_ip(cls, extra):
         extra['host_name'] = JSONFormatter.host_name
         extra['host_ip'] = JSONFormatter.host_ip
+
+    @classmethod
+    def set_trace_id(cls, extra):
+        # 优先从日志参数里面获取
+        trace_id = extra['msg'].get('__unique_trace_id__')
+        if trace_id:
+            extra['trace_id'] = trace_id
+            return
+        # 日志参数未找到trace_id
+        # 根据调用栈信息往前追溯、最多100层
+        idx = 0
+        f_back = sys._getframe().f_back
+        while idx < MAX_BACK_DEPTH:
+            local = f_back.f_locals
+            trace_id = local.get('__unique_trace_id__') or local.get('kwargs', {}).get('__unique_trace_id__')
+            if trace_id is not None:
+                extra['trace_id'] = trace_id
+                break
+            f_back = f_back.f_back
+            idx += 1
 
 
 class LoggerConf:

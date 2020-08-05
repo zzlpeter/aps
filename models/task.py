@@ -38,7 +38,7 @@ class Task(peewee.Model):
         db_table = 'task'
 
     @classmethod
-    def task_atomic_insert(cls, task_key):
+    def task_atomic_insert(cls, task_key, trace_id):
         db = cls._meta.database
         execute_success = False
         sub_task_id = None
@@ -47,11 +47,12 @@ class Task(peewee.Model):
                 task = cls.select().where(cls.task_key == task_key, cls.status == 'ready', cls.is_valid == 1).for_update()
                 task_id = task[0].id
                 cls.update(status='doing').where(Task.task_key == task_key).execute()
-                sub = TaskExecute.create(task_id=task_id, status='todo', extra={})
+                sub = TaskExecute.create(task_id=task_id, status='todo', extra={}, trace_id=trace_id)
                 trans.commit()
                 sub_task_id = sub.id
                 execute_success = True
             except Exception as e:
+                print(e)
                 trans.rollback()
         return execute_success, sub_task_id
 
@@ -92,6 +93,7 @@ class TaskExecute(peewee.Model):
     task_id = peewee.IntegerField(help_text='任务ID')
     status = peewee.CharField(help_text='执行状态')
     extra = JsonField(help_text='额外信息(json格式)', default={})
+    trace_id = peewee.CharField(help_text='trace_id')
     create_at = peewee.DateTimeField()
     update_at = peewee.DateTimeField()
 
