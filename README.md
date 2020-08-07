@@ -57,9 +57,9 @@ requirements.txt
 
     -- task表测试数据
     BEGIN;
-    INSERT INTO `task` VALUES (1, 'test_interval', 'test_interval', 'interval', '5', '1,2,3', 1, 'ready', '{}', '2020-04-24 16:51:03', '2020-04-24 19:13:59');
-    INSERT INTO `task` VALUES (2, 'test_date', 'test_date', 'date', '2020-04-24 18:08:00', '\"guess\",\"hello\"', 0, 'ready', '{}', '2020-04-24 16:51:03', '2020-04-24 18:08:03');
-    INSERT INTO `task` VALUES (3, 'test_cron', 'test_cron', 'cron', '* * * * *', '4,5,6', 0, 'ready', '{}', '2020-04-24 16:51:03', '2020-04-24 18:46:15');
+    INSERT INTO `task` VALUES (1, 'test_interval', '测试interval任务', 'test_interval', 'interval', '5', '1,2,3', 1, 'ready', '{}', '2020-04-24 16:51:03', '2020-04-24 19:13:59');
+    INSERT INTO `task` VALUES (2, 'test_date', '测试date任务', 'test_date', 'date', '2020-04-24 18:08:00', '\"guess\",\"hello\"', 0, 'ready', '{}', '2020-04-24 16:51:03', '2020-04-24 18:08:03');
+    INSERT INTO `task` VALUES (3, 'test_cron', '测试cron任务', 'test_cron', 'cron', '* * * * *', '4,5,6', 0, 'ready', '{}', '2020-04-24 16:51:03', '2020-04-24 18:46:15');
     COMMIT;
     
     -- 创建execute_task任务执行表
@@ -68,6 +68,7 @@ requirements.txt
       `task_id` int(11) NOT NULL COMMENT '任务ID',
       `status` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '执行状态',
       `extra` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '{}' COMMENT '额外信息',
+      `trace_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '任务执行trace-ID',
       `create_at` timestamp(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0) COMMENT '创建时间',
       `update_at` timestamp(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '更新时间',
       PRIMARY KEY (`id`) USING BTREE
@@ -86,5 +87,5 @@ requirements.txt
        pass
    `task_key`: task表里定义的唯一标识
    `*args`: task表里定义的args参数
-   `**kwargs`: {'sub_task_id': 当前执行子任务的主键}
+   `**kwargs`: {'sub_task_id': 当前执行子任务的主键, '__unique_trace_id__': 当前执行任务的trace-ID}
 ```
