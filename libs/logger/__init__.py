@@ -215,4 +215,7 @@ try:
 except Exception as e:
     other_logger.error(traceback.format_exc())
     other_logger.error({'exception': traceback.format_exc()})
+
+每次执行任务都会生成trace-ID(execute_task表里可查)
+根据该trace-ID即可查询相关日志「纪录日志不必关心该ID、由框架自动捕获」
 """
