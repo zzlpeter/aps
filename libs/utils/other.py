@@ -4,6 +4,7 @@ import uuid
 import hashlib
 import time
 import random
+import sys
 from functools import lru_cache
 from configparser import ConfigParser
 
@@ -137,3 +138,26 @@ def dict2obj(mapper: dict = None) -> object:
         for k, v in mapper.items():
             setattr(Obj, k, v)
     return Obj
+
+
+def get_trace_id_from_stack():
+    """
+    通过调用栈信息获取trace_id
+    最多追溯100层
+    """
+    max_back_depth, idx = 100, 0
+    trace_id = None
+    f_back = sys._getframe().f_back
+    while idx < max_back_depth:
+        if not f_back: break
+        local = f_back.f_locals
+        if not local: break
+        _kwargs = local.get('kwargs')
+        kwargs = _kwargs if type(_kwargs) is dict else {}
+        trace_id = local.get('__unique_trace_id__') or kwargs.get('__unique_trace_id__')
+        if trace_id is not None:
+            trace_id = trace_id
+            break
+        f_back = f_back.f_back
+        idx += 1
+    return trace_id

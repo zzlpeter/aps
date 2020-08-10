@@ -7,6 +7,7 @@ import aiohttp
 import requests
 
 from libs.logger import LoggerPool
+from libs.utils.other import get_trace_id_from_stack
 
 logger = LoggerPool.root
 SPECIAL_ATTRS = ('__query__', '__data__', '__json__', '__path1__')
@@ -17,33 +18,32 @@ class SpecialEmpty(object):
 
 
 class Field(object):
-    def __init__(self, default, required, comment):
+    def __init__(self, default, required):
         self.default = default
         self.required = required
-        self.comment = comment
 
     def __str__(self):
         return '<%s:%s>' % (self.__class__.__name__, self.default)
 
 
 class DataField(Field):
-    def __init__(self, default=None, required=False, comment=None):
-        super(DataField, self).__init__(default, required, comment)
+    def __init__(self, default=None, required=False):
+        super(DataField, self).__init__(default, required)
 
 
 class QueryField(Field):
-    def __init__(self, default=None, required=False, comment=None):
-        super(QueryField, self).__init__(default, required, comment)
+    def __init__(self, default=None, required=False):
+        super(QueryField, self).__init__(default, required)
 
 
 class JsonField(Field):
-    def __init__(self, default=None, required=False, comment=None):
-        super(JsonField, self).__init__(default, required, comment)
+    def __init__(self, default=None, required=False):
+        super(JsonField, self).__init__(default, required)
 
 
 class PathField(Field):
-    def __init__(self, default=None, required=False, comment=None):
-        super(PathField, self).__init__(default, required, comment)
+    def __init__(self, default=None, required=False):
+        super(PathField, self).__init__(default, required)
 
 
 class RequestMetaClass(type):
@@ -151,20 +151,38 @@ class BaseServer(SpecialEmpty, dict, object, metaclass=RequestMetaClass):
             req_map['json'] = self._json
         self._req_map = req_map
 
-    def fetch(self):
-        response = requests.request(self._method, self._url, headers=self._header,
-                                    timeout=self._timeout, **self._req_map)
-        self._fetch_url = response.url
-        self._response = response.content
-        return self
+    def fetch(self, transmit_err=True):
+        try:
+            response = requests.request(self._method, self._url, headers=self._header,
+                                        timeout=self._timeout, **self._req_map)
+            self._fetch_url = response.url
+            self._response = response.content
+            return self
+        except Exception as e:
+            logger.error({'panic_keyword': '_fetch_err', 'err': traceback.format_exc(),
+                          'url': self._url, 'fetch_url': self._fetch_url, 'data': self._data,
+                          'query': self._query, 'json': self._json, 'rsp': self._response})
+            if transmit_err:
+                raise e
+            return self
 
-    async def async_fetch(self):
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
-            handle = getattr(session, self._method)
-            timeout = aiohttp.ClientTimeout(total=self._timeout)
-            async with handle(url=self._url, timeout=timeout, headers=self._header, **self._req_map) as response:
-                self._fetch_url = response.url
-                self._response = await response.text()
+    async def async_fetch(self, transmit_err=True):
+        __unique_trace_id__ = get_trace_id_from_stack()
+        try:
+            async with aiohttp.ClientSession() as session:
+                handle = getattr(session, self._method)
+                timeout = aiohttp.ClientTimeout(total=self._timeout)
+                async with handle(url=self._url, timeout=timeout, headers=self._header, **self._req_map) as response:
+                    self._fetch_url = response.url
+                    self._response = await response.text()
+                return self
+        except Exception as e:
+            logger.error({'panic_keyword': '_async_fetch_err', 'err': traceback.format_exc(),
+                          'url': self._url, 'fetch_url': self._fetch_url, 'data': self._data,
+                          'query': self._query, 'json': self._json, 'rsp': self._response,
+                          '__unique_trace_id__': __unique_trace_id__})
+            if transmit_err:
+                raise e
             return self
 
     def json(self, safe=True):

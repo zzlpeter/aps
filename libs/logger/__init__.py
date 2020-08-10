@@ -2,12 +2,11 @@ import logging
 import logging.config
 import concurrent_log_handler
 import json
-import sys
 import datetime
 from copy import deepcopy
 from functools import singledispatch
 
-from libs.utils.other import Host
+from libs.utils.other import Host, get_trace_id_from_stack
 from libs.utils.datekit import now_timestamp, datetime_fmt
 from libs.tomlread import ConfEntity
 
@@ -92,20 +91,9 @@ class JSONFormatter(logging.Formatter):
             return
         # 日志参数未找到trace_id
         # 根据调用栈信息往前追溯、最多100层
-        idx = 0
-        f_back = sys._getframe().f_back
-        while idx < MAX_BACK_DEPTH:
-            if not f_back: break
-            local = f_back.f_locals
-            if not local: break
-            _kwargs = local.get('kwargs')
-            kwargs = _kwargs if type(_kwargs) is dict else {}
-            trace_id = local.get('__unique_trace_id__') or kwargs.get('__unique_trace_id__')
-            if trace_id is not None:
-                extra['trace_id'] = trace_id
-                break
-            f_back = f_back.f_back
-            idx += 1
+        trace_id = get_trace_id_from_stack()
+        if trace_id is not None:
+            extra['trace_id'] = trace_id
 
 
 class LoggerConf:
