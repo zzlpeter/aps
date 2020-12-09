@@ -117,7 +117,7 @@ def signal_handler(signalnum, frame):
     # 设置环境变量
     Environ().IS_KILLED = 'KILLED'
     # 等待所有任务执行完成之后再退出（优雅关闭）
-    asyncio.ensure_future(shutdown())
+    scheduler.add_job(shutdown)
 
 
 if __name__ == '__main__':
