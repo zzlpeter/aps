@@ -3,8 +3,10 @@ import traceback
 
 from libs.utils.other import Environ, Host, gen_uuid
 from libs.utils.notice import ding_ding_notice
+from libs.utils.datekit import datetime_fmt, datetime2timestamp, now_timestamp
 from libs.logger import LoggerPool
-from models.task import Task
+from libs.redis import redis_pools
+from models.task import Task, TaskExecute
 
 ip = Host().host_ip()
 logger = LoggerPool.other
@@ -106,3 +108,44 @@ class TriggerOperate:
         args_list = args.split(',')
         args_with_double_quotes = ['"{}"'.format(arg) for arg in args_list]
         return '"{}",'.format(task_key) + ','.join(args_with_double_quotes)
+
+
+async def monitor_tasks():
+    """
+    监控任务执行情况
+    """
+    rds = await redis_pools('default')
+    # 允许多实例间最大误差为60s
+    rst = await rds.set('assassin:unique:monitor_task', now_timestamp(), expire=60, exist='SET_IF_NOT_EXIST')
+    if not rst:
+        logger.info({'keyword': 'get_monitor_task_lock', 'ip': ip})
+        return
+    alarms = ['assassin任务执行异常, 详情如下：\n任务key -- 默认延迟s -- 最近执行']
+    tasks = await Task.async_objects.execute(Task.select().where(Task.is_valid == 1))
+    for t in tasks:
+        sub = await TaskExecute.async_objects.execute(TaskExecute.select(TaskExecute.create_at,
+                                                                         TaskExecute.extra, TaskExecute.id).
+                                                      where(TaskExecute.task_id == t.id).
+                                                      order_by(-TaskExecute.id).limit(1))
+        for s in sub:
+            # 最近执行时间
+            bj = datetime_fmt(s.create_at)
+            last_stamp = datetime2timestamp(s.create_at) - 8 * 3600
+            delay = t.extra.get('delay', 3600)
+            if now_timestamp() - last_stamp > delay:
+                # 该报警是否已被处理
+                if not s.extra.get('deal_alarm'):
+                    alarms.append(f'{t.task_key} -- {delay} -- {bj}')
+                    t.update_ext(alarm_sub_task=s.id)
+            break
+    if len(alarms) > 1:
+        await ding_ding_notice('\n'.join(alarms))
+
+
+async def reset_tasks_status():
+    """
+    程序退出之前更新所有doing状态任务为ready
+    确保下次可以正常执行
+    """
+    logger.info('程序即将退出、重置任务状态')
+    await Task.async_objects.execute(Task.update(status='ready').where(Task.is_valid == 1, Task.status == 'doing'))

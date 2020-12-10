@@ -14,7 +14,7 @@ from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_MAX_INSTANCES, EVENT_J
 
 from tasks import *
 from models.task import Task
-from libs.aps import lock, TriggerOperate
+from libs.aps import lock, TriggerOperate, monitor_tasks, reset_tasks_status
 from libs.utils.other import Environ
 from libs.utils.notice import ding_ding_notice
 from libs.logger import LoggerPool
@@ -104,8 +104,13 @@ async def sync_schedule_task():
 
 
 async def shutdown():
+    logger.info('开始倒计时10s')
     await asyncio.sleep(timeout)
+    # 等待timeout之后重置doing状态的任务
+    logger.info('开始重置任务状态')
+    await reset_tasks_status()
     # 等待timeout秒之后退出主程序（确保scheduler中的程序全部执行完毕）
+    logger.info('程序退出')
     os._exit(0)
 
 
@@ -129,6 +134,7 @@ if __name__ == '__main__':
     scheduler.add_listener(err_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED | EVENT_JOB_ERROR)
     # scheduler.add_job(sync_schedule_task, trigger=CronTrigger.from_crontab('* * * * *'), id='sync_task')
     scheduler.add_job(sync_schedule_task, 'interval', seconds=10, id='sync_task_all')
+    scheduler.add_job(monitor_tasks, trigger=CronTrigger.from_crontab('*/10 * * * *'))
 
     scheduler.start()
 
