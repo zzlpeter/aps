@@ -1,5 +1,6 @@
 from functools import wraps
 import traceback
+import threading
 
 
 def try_catch(func):
@@ -38,14 +39,16 @@ def try_catch_async(func):
 
 def singleton(cls):
     """
-    类单例模式
+    类单例模式 - 线程安全
     """
     instance = {}
+    lock = threading.Lock()
 
     @wraps(cls)
     def _single(*args, **kwargs):
-        if cls not in instance:
-            instance[cls] = cls(*args, **kwargs)
+        with lock:
+            if cls not in instance:
+                instance[cls] = cls(*args, **kwargs)
         return instance[cls]
 
     return _single
