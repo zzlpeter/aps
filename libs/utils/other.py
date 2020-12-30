@@ -128,16 +128,27 @@ def gen_unique_id():
     return md5(_str)
 
 
-def dict2obj(mapper: dict = None) -> object:
+def dict2obj(mapper: dict, recur=False) -> object:
     """
-    字典转对象
+    字典转对象 - 支持多层嵌套
     """
     class Obj:
         pass
-    if isinstance(mapper, dict):
-        for k, v in mapper.items():
-            setattr(Obj, k, v)
-    return Obj
+
+    def traverse(mp, oj):
+        if not isinstance(mp, dict):
+            return oj
+        for k, v in mp.items():
+            if recur:
+                if isinstance(v, dict):
+                    setattr(oj, k, traverse(v, oj))
+                else:
+                    setattr(oj, k, v)
+            else:
+                setattr(oj, k, v)
+        return oj
+
+    return traverse(mapper, Obj)
 
 
 def get_trace_id_from_stack():
